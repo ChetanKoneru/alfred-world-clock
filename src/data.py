@@ -1,4 +1,4 @@
-from pytz import country_timezones
+from pytz import country_names, country_timezones
 
 emojis = {
     "AD": "🇦🇩",
@@ -254,10 +254,13 @@ emojis = {
 }
 
 flags = {}
+countries = {}
 
 
 for code in country_timezones:
     timezones = country_timezones[code]
+    country = country_names[code]
 
     for timezone in timezones:
         flags[timezone] = emojis[code]
+        countries.setdefault(timezone, []).append(country)

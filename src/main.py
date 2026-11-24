@@ -1,3 +1,4 @@
+import re
 import sys
 from datetime import datetime, timedelta
 from typing import List, Tuple
@@ -46,39 +47,49 @@ def convert_to_delta(delta_arg: str) -> timedelta:
         raise ValueError("invalid time offset")
 
 
-# parse arguments to find in which mode the workflow is running (always returns utc datetime)
-def parse_args(args: List[str], home_now: datetime) -> datetime:
-    if len(args) > 2:
-        raise ValueError("too many params, expected: [+offset] / [-offset] / [time] / [time date]")
+TIME_PATTERN = re.compile(r"^\d{1,2}:\d{1,2}(:\d{1,2})?$")
 
-    # mode now: shows current time
+
+# parse arguments to find in which mode the workflow is running
+# (always returns utc datetime and an optional search query)
+def parse_args(args: List[str], home_now: datetime) -> Tuple[datetime, str]:
+    args = [part for arg in args for part in arg.split()]
+
+    # mode now: shows current time (an optional query filters the timezones)
     if len(args) == 0:
-        return datetime.utcnow()
+        return datetime.utcnow(), ""
 
-    # mode offset: shows current time +/- a time offset
-    if args[0][0] in "+-":
-        return datetime.utcnow() + convert_to_delta(args[0])
+    # mode offset: shows current time +/- a time offset (an optional query filters the timezones)
+    if args[0].startswith(("+", "-")):
+        return datetime.utcnow() + convert_to_delta(args[0]), " ".join(args[1:])
 
     # mode set: shows especific date and time as home
-    hour, minute, second = convert_to_time(args[0])
+    if TIME_PATTERN.match(args[0]):
+        if len(args) > 2:
+            raise ValueError("too many params, expected: [+offset] / [-offset] / [time] / [time date]")
 
-    now = home_now.replace(
-        hour=hour,
-        minute=minute,
-        second=second,
-        microsecond=0,
-    )
+        hour, minute, second = convert_to_time(args[0])
 
-    if len(args) == 2:
-        day, month, year = convert_to_date(args[1])
-
-        now = now.replace(
-            day=day,
-            month=month,
-            year=year,
+        now = home_now.replace(
+            hour=hour,
+            minute=minute,
+            second=second,
+            microsecond=0,
         )
 
-    return now.astimezone(pytz.utc)
+        if len(args) == 2:
+            day, month, year = convert_to_date(args[1])
+
+            now = now.replace(
+                day=day,
+                month=month,
+                year=year,
+            )
+
+        return now.astimezone(pytz.utc), ""
+
+    # mode now with a query: filter timezones by city, country or timezone name
+    return datetime.utcnow(), " ".join(args)
 
 
 def main(workflow: Workflow):
@@ -86,7 +97,7 @@ def main(workflow: Workflow):
     formatter = helpers.get_formatter(workflow)
 
     home_tz, home_now = helpers.get_home(workflow)
-    utc_now = parse_args(workflow.args, home_now)
+    utc_now, query = parse_args(workflow.args, home_now)
 
     timezones = helpers.get_timezones(
         workflow,
@@ -94,9 +105,17 @@ def main(workflow: Workflow):
         include=[home_tz],
     )
 
+    timezones = helpers.filter_timezones(timezones, query, name_replacements)
+
+    if query and not timezones:
+        workflow.new_item(
+            title=f"No timezones match '{query}'",
+            subtitle="Search by city, country or timezone name.",
+            valid=False,
+        )
+
     for timezone, now in sorted(timezones.items(), key=lambda kw: kw[1].isoformat()):
-        location = timezone.split("/")[-1].replace("_", " ")
-        location = name_replacements.get(location, location)
+        location = helpers.get_location(timezone, name_replacements)
 
         workflow.new_item(
             title=formatter(now),

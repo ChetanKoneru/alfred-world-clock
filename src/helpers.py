@@ -1,9 +1,12 @@
+import re
+import unicodedata
 from datetime import datetime
 from typing import Dict, Tuple, List
 
 import pytz as tz
 from pyflow import Workflow
 
+import data
 import formatters
 
 
@@ -62,6 +65,42 @@ def get_name_replacements(workflow: Workflow):
         name_replacements[old.strip()] = new.strip()
 
     return name_replacements
+
+
+def get_location(timezone: str, name_replacements: Dict[str, str]) -> str:
+    location = timezone.split("/")[-1].replace("_", " ")
+    return name_replacements.get(location, location)
+
+
+def normalize(value: str) -> str:
+    value = "".join(character for character in unicodedata.normalize("NFKD", value.casefold()) if not unicodedata.combining(character))
+    return re.sub(r"[^\w\s]", " ", value).strip()
+
+
+def get_searchable_text(timezone: str, name_replacements: Dict[str, str]) -> str:
+    location = timezone.split("/")[-1].replace("_", " ")
+    display_location = name_replacements.get(location, location)
+
+    return normalize(
+        " ".join(
+            [
+                timezone,
+                timezone.replace("/", " "),
+                location,
+                display_location,
+                *data.countries.get(timezone, []),
+            ]
+        )
+    )
+
+
+def filter_timezones(timezones: Dict[str, datetime], query: str, name_replacements: Dict[str, str]) -> Dict[str, datetime]:
+    terms = normalize(query).split()
+
+    if not terms:
+        return timezones
+
+    return {timezone: now for timezone, now in timezones.items() if all(term in get_searchable_text(timezone, name_replacements) for term in terms)}
 
 
 def get_timezones(workflow: Workflow, now: datetime, include: List[str] = None) -> Dict[str, datetime]:
