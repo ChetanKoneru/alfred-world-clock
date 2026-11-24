@@ -27,3 +27,16 @@ For example: `now Sydney`, `now Australia` or `now Europe/Paris`.
 
 ##### Offset
 ![offset](screenshots/offset.png)
+
+
+#### Development:
+
+See [SETUP.md](SETUP.md) for setup and build instructions.
+
+```sh
+uv sync
+PYTHONPATH=src uv run python -m unittest discover -s tests
+NO_OPEN=1 ./scripts/release.sh
+```
+
+Built workflows are stored in `releases/alfred-world-clock.v<version>.alfredworkflow`.

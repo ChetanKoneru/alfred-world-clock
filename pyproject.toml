@@ -1,29 +1,33 @@
-[tool.poetry]
-name = "World Clock"
+[project]
+name = "alfred-world-clock"
 version = "2.3.0"
 description = "Check time in multiple timezones."
-documentation = "https://github.com/fedecalendino/alfred-world-clock/blob/main/README.md"
-homepage = "https://github.com/fedecalendino/alfred-world-clock"
-license = "MIT"
-
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9,<3.12"
 authors = [
-    "Fede Calendino <fede@calendino.com>"
+    { name = "Fede Calendino", email = "fede@calendino.com" },
+]
+dependencies = [
+    "alfred-pyflow==0.4.6",
+    "pytimeparse==1.1.8",
+    "pytz==2023.3.post1",
 ]
 
-[tool.poetry.dependencies]
-python = ">=3.8,<3.12"
-alfred-pyflow = "^0.4.6"
-pytz = "^2023.3"
-pytimeparse = "^1.1.8"
+[project.urls]
+Homepage = "https://github.com/fedecalendino/alfred-world-clock"
+Documentation = "https://github.com/fedecalendino/alfred-world-clock/blob/main/README.md"
+Repository = "https://github.com/fedecalendino/alfred-world-clock"
 
-[tool.poetry.group.dev.dependencies]
-black = "^23.3.0"
-coverage = "^7.2.5"
-ddt = "^1.6.0"
+[dependency-groups]
+dev = [
+    "black==23.11.0",
+    "coverage==7.3.2",
+    "ddt==1.7.2",
+]
+
+[tool.uv]
+package = false
 
 [tool.black]
 line-length = 150
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"

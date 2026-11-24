@@ -1,7 +1,16 @@
+VENV=${VENV:-.venv}
+
 rm -rf "./dist/"
 
 echo "Copy dependencies"
-cp -r $(find .venv | egrep "site-packages$") ./dist
+SITE_PACKAGES=$(find "$VENV" -type d -name site-packages | head -n 1)
+
+if [ -z "$SITE_PACKAGES" ]; then
+  echo "Error: no site-packages found in '$VENV'"
+  exit 1
+fi
+
+cp -r "$SITE_PACKAGES" ./dist
 
 echo "Clean up dist folder"
 cd dist
